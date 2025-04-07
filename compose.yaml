@@ -1,0 +1,51 @@
+services:
+  ssh:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ssh
+    ports:
+      - "8022:8022"
+
+  curl:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: curl
+    networks:
+      - web
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.dbut-sh-curl.entrypoints: "web"
+      traefik.http.routers.dbut-sh-curl.rule: "Host(`dbut.sh`) && HeaderRegexp(`User-Agent`, `^curl`)"
+      traefik.http.services.dbut-sh-curl.loadbalancer.server.port: 8080
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    networks:
+      - web
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.dbut-sh-web.entrypoints: "web"
+      traefik.http.routers.dbut-sh-web.rule: "Host(`dbut.sh`)"
+      traefik.http.services.dbut-sh-web.loadbalancer.server.port: 8080
+
+  vanity:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: vanity
+    networks:
+      - web
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.dbut-sh-vanity.entrypoints: "web"
+      traefik.http.routers.dbut-sh-vanity.rule: "Host(`dbut.sh`) && Query(`go-get`, `1`)"
+      traefik.http.services.dbut-sh-vanity.loadbalancer.server.port: 8080
+
+networks:
+  web:
+    external: true
