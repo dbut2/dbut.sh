@@ -1,0 +1,137 @@
+<pre><code>
+
+ ██████╗ ██████╗ ██████╗ ██╗   ██╗████████╗██████╗
+██╔═══██╗██╔══██╗██╔══██╗██║   ██║╚══██╔══╝╚════██╗
+██║██╗██║██║  ██║██████╔╝██║   ██║   ██║    █████╔╝
+██║██║██║██║  ██║██╔══██╗██║   ██║   ██║   ██╔═══╝
+╚█║████╔╝██████╔╝██████╔╝╚██████╔╝   ██║   ███████╗
+ ╚╝╚═══╝ ╚═════╝ ╚═════╝  ╚═════╝    ╚═╝   ╚══════╝
+</code></pre>
+<h2 id="introduction">Introduction</h2>
+<p>This guide will walk you through the process of attaching GPUs to a
+Docker Swarm node and running services that can utilize these GPUs. This
+setup is particularly useful for running GPU-intensive workloads in a
+distributed environment.</p>
+<h2 id="assumptions">Assumptions</h2>
+<ul>
+<li>You are running a recent version of Ubuntu (Noble 24.04 LTS in this
+case).</li>
+<li>You have NVIDIA drivers already installed (preferably the
+<code>-server</code> version).
+<ul>
+<li>If not, follow the instructions at <a
+href="https://ubuntu.com/server/docs/nvidia-drivers-installation">Ubuntu’s
+NVIDIA driver installation guide</a>.</li>
+</ul></li>
+<li>You have Docker and Docker Swarm already set up on your system.</li>
+</ul>
+<h2 id="steps-to-add-gpus-to-docker-swarm">Steps to Add GPUs to Docker
+Swarm</h2>
+<h3 id="identify-your-gpu">1. Identify Your GPU</h3>
+<p>First, we need to find the UUID of the GPU you want to attach to
+Docker Swarm.</p>
+<p>Run the following command:</p>
+<pre class="shell"><code>nvidia-smi -a</code></pre>
+<p>Look for the <code>GPU UUID</code> line under the desired GPU. In
+this example, we’re using an RTX 3060:</p>
+<pre class="shell"><code>==============NVSMI LOG==============
+
+Driver Version                            : 535.183.01
+CUDA Version                              : 12.2
+
+Attached GPUs                             : 1
+GPU 00000000:00:10.0
+    Product Name                          : NVIDIA GeForce RTX 3060
+...
+    GPU UUID                              : GPU-a0df8e5a-e4b9-467d-9bf5-cebb65027549
+...</code></pre>
+<h3 id="update-docker-daemon-configuration">2. Update Docker Daemon
+Configuration</h3>
+<p>Edit the Docker daemon configuration file:</p>
+<pre class="shell"><code>sudo nano /etc/docker/daemon.json</code></pre>
+<p>Add or modify the following content:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;runtimes&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;nvidia&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;args&quot;</span><span class="fu">:</span> <span class="ot">[]</span><span class="fu">,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;path&quot;</span><span class="fu">:</span> <span class="st">&quot;/usr/bin/nvidia-container-runtime&quot;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;default-runtime&quot;</span><span class="fu">:</span> <span class="st">&quot;nvidia&quot;</span><span class="fu">,</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;node-generic-resources&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;NVIDIA-GPU=GPU-a0df8e5a-e4b9-467d-9bf5-cebb65027549&quot;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Replace the UUID in <code>node-generic-resources</code> with the one
+you found in step 1.</p>
+<h3 id="configure-nvidia-container-runtime">3. Configure NVIDIA
+Container Runtime</h3>
+<p>Edit the NVIDIA container runtime configuration:</p>
+<pre class="shell"><code>sudo nano /etc/nvidia-container-runtime/config.toml</code></pre>
+<p>Find the <code>swarm-resource</code> line and uncomment it. Replace
+its content with:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">swarm-resource</span> <span class="op">=</span> <span class="st">&quot;DOCKER_RESOURCE_NVIDIA-GPU&quot;</span></span></code></pre></div>
+<h3 id="restart-docker-service">4. Restart Docker Service</h3>
+<p>After making these changes, restart the Docker service:</p>
+<pre class="shell"><code>sudo systemctl restart docker</code></pre>
+<h2 id="running-gpu-enabled-services-on-docker-swarm">Running
+GPU-Enabled Services on Docker Swarm</h2>
+<p>Now that we’ve attached the GPU to our Docker Swarm node, we can run
+services that utilize this GPU. Here’s how to deploy a GPU-enabled
+service using Docker Compose:</p>
+<p>Create a compose.yaml file with the following content:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">services</span><span class="kw">:</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">gpu-service</span><span class="kw">:</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">image</span><span class="kw">:</span><span class="at"> ubuntu</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">command</span><span class="kw">:</span><span class="at"> nvidia-smi</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">deploy</span><span class="kw">:</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">placement</span><span class="kw">:</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">constraints</span><span class="kw">:</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> node.labels.gpu == true</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">resources</span><span class="kw">:</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">reservations</span><span class="kw">:</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">generic_resources</span><span class="kw">:</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> </span><span class="fu">discrete_resource_spec</span><span class="kw">:</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="at">                </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;NVIDIA-GPU&#39;</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="at">                </span><span class="fu">value</span><span class="kw">:</span><span class="at"> </span><span class="dv">0</span></span></code></pre></div>
+<p>This compose service does the following:</p>
+<ul>
+<li>Creates a service named gpu-service</li>
+<li>Constrains the service to run only on nodes with the gpu label set
+to true</li>
+<li>Reserves one GPU resource for this service</li>
+<li>Mounts the NVIDIA container runtime hook</li>
+<li>Uses your GPU-enabled Docker image</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>By following these steps, you’ve successfully added GPU support to
+your Docker Swarm node and learned how to deploy GPU-enabled services.
+This setup allows you to leverage the power of GPUs in your distributed
+Docker environment, enabling more efficient processing for tasks like
+machine learning, scientific computing, and video processing.</p>
+<h2 id="edit-2025-03-03">Edit (2025-03-03):</h2>
+<p>Should you need multiple services to have a GPU reservation, you can
+add additional generic reservations in <code>daemon.json</code>, each
+with a unique reference key pointing to the same GPU identifier:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="er">...</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;node-generic-resources&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;NVIDIA-GPU-0=GPU-a0df8e5a-e4b9-467d-9bf5-cebb65027549&quot;</span><span class="ot">,</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;NVIDIA-GPU-1=GPU-a0df8e5a-e4b9-467d-9bf5-cebb65027549&quot;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Then in your service config use one the available keys per service as
+the resource spec kind.</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">...</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">        reservations:</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co">          generic_resources:</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">            - discrete_resource_spec:</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co">                kind: &#39;NVIDIA-GPU-1&#39;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co">                value: 0</span></span></code></pre></div>
+<p>You will need to manually keep track of each available key as you can
+only have each one allocated to single service.</p>

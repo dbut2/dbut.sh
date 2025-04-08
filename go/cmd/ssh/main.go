@@ -50,12 +50,13 @@ func newModel(width, height int) *model {
 }
 
 func (m *model) loadContent() {
-	content, err := pages.Pages.ReadFile("swarm-gpus.txt")
+	content, err := pages.MD.ReadFile("index.md")
 	if err != nil {
 		return
 	}
 
 	r, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
 		glamour.WithWordWrap(m.viewport.Width),
 		glamour.WithEmoji(),
 	)
@@ -93,7 +94,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) View() string {
-	return m.viewport.View()
+	return m.viewport.View() + "\n\n" + "Hello, world!"
 }
 
 func must[t any](v t, err error) t {

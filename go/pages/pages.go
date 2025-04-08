@@ -4,5 +4,10 @@ import (
 	"embed"
 )
 
-//go:embed *.txt
-var Pages embed.FS
+//go:generate ./convert.sh
+
+//go:embed *.md
+var MD embed.FS
+
+//go:embed *.html
+var HTML embed.FS

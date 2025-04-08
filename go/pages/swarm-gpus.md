@@ -1,13 +1,25 @@
-=## Introduction
+```
+
+
+ ██████╗ ██████╗ ██████╗ ██╗   ██╗████████╗██████╗
+██╔═══██╗██╔══██╗██╔══██╗██║   ██║╚══██╔══╝╚════██╗
+██║██╗██║██║  ██║██████╔╝██║   ██║   ██║    █████╔╝
+██║██║██║██║  ██║██╔══██╗██║   ██║   ██║   ██╔═══╝
+╚█║████╔╝██████╔╝██████╔╝╚██████╔╝   ██║   ███████╗
+ ╚╝╚═══╝ ╚═════╝ ╚═════╝  ╚═════╝    ╚═╝   ╚══════╝
+
+```
+
+## Introduction
 
 This guide will walk you through the process of attaching GPUs to a Docker Swarm node and running services that can utilize these GPUs. This setup is particularly useful for running GPU-intensive workloads in a distributed environment.
 
 ## Assumptions
 
-*   You are running a recent version of Ubuntu (Noble 24.04 LTS in this case).
-*   You have NVIDIA drivers already installed (preferably the `-server` version).
-    *   If not, follow the instructions at [Ubuntu's NVIDIA driver installation guide](https://ubuntu.com/server/docs/nvidia-drivers-installation).
-*   You have Docker and Docker Swarm already set up on your system.
+* You are running a recent version of Ubuntu (Noble 24.04 LTS in this case).
+* You have NVIDIA drivers already installed (preferably the `-server` version).
+  * If not, follow the instructions at [Ubuntu's NVIDIA driver installation guide](https://ubuntu.com/server/docs/nvidia-drivers-installation).
+* You have Docker and Docker Swarm already set up on your system.
 
 ## Steps to Add GPUs to Docker Swarm
 
