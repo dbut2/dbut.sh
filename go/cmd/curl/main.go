@@ -1,38 +1,15 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"strings"
-
-	"github.com/charmbracelet/glamour"
-
-	"dbut.sh/pages"
+	"dbut.sh/pkg/provider"
+	"dbut.sh/pkg/server"
+	"dbut.sh/pkg/utils"
 )
 
 func main() {
-	rend, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(80),
-		glamour.WithEmoji(),
-	)
+	p := utils.Must(provider.NewMarkdownProvider(80))
+	err := server.StartHTTPServer(":8080", p)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix("/", r.URL.Path)
-		if path == "" {
-			path = "index"
-		}
-		bytes, err := pages.MD.ReadFile(path + ".md")
-		if err != nil {
-			panic(err.Error())
-		}
-		bytes, err = rend.RenderBytes(bytes)
-		if err != nil {
-			panic(err.Error())
-		}
-		w.Write(bytes)
-	})
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }

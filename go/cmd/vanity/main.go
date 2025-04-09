@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
-	"net/http"
+	"dbut.sh/pkg/provider"
+	"dbut.sh/pkg/server"
 )
 
 const tmpl = `<!DOCTYPE html>
@@ -14,9 +14,9 @@ const tmpl = `<!DOCTYPE html>
 </html>`
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(tmpl))
-	})
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	p := provider.NewVanityProvider(tmpl)
+	err := server.StartHTTPServer(":8080", p)
+	if err != nil {
+		panic(err)
+	}
 }

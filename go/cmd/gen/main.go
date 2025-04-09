@@ -10,8 +10,10 @@ import (
 
 //go:generate go run .
 
+type TextContentGenerator func() string
+
 func main() {
-	pages := map[string]func() string{
+	pages := map[string]TextContentGenerator{
 		"index":      content.Index,
 		"swarm-gpus": content.GpuSwarm,
 	}
@@ -22,9 +24,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Generate each page
 	for page, generator := range pages {
-		outputPath := filepath.Join(outputDir, page+".txt")
+		outputPath := filepath.Join(outputDir, page+".md")
 		content := generator()
 
 		fmt.Printf("Generating %s...\n", outputPath)
