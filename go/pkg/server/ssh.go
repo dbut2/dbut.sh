@@ -2,7 +2,6 @@ package server
 
 import (
 	"os"
-	"sync"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,7 +19,6 @@ type SSHServer struct {
 	HostKeyPath string
 	provider    *provider.MarkdownProvider
 	server      *ssh.Server
-	mu          sync.Mutex
 }
 
 func NewSSHServer(address string, hostKeyPath string) (*SSHServer, error) {
